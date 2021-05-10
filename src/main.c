@@ -160,7 +160,8 @@ void quit(int failure_status) {
 
     int exit_status = EXIT_FAILURE;
 
-    /* Depending on the value of `failure_status`, only a subset of functions are called while quitting. This eliminates the need of a cumbersome if-else block */
+    /* Depending on the value of `failure_status`, only a subset of functions are called while quitting.
+    This eliminates the need of a cumbersome if-else block */
     switch (failure_status) {
         // Quit normally, and execute all functions in order
         case NORMAL:
