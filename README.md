@@ -1,2 +1,2 @@
 # audio-editor
-An audio editor I am developing
+An audio editor I am developing.
