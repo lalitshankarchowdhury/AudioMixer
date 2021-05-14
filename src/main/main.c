@@ -3,25 +3,36 @@
 #include "../log/log.h"
 
 #include <assert.h>
+#include <unistd.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 int main()
 {
     assert(audioInitSubsystem() == AUDIO_SUCCESS);
 
-    AudioClip clip;
+    AudioClip clip[2];
 
-    assert(audioLoadClip(&clip, "Test.wav") == AUDIO_SUCCESS);
+    assert(audioLoadClip(&clip[0], "Test1.wav") == AUDIO_SUCCESS);
+    assert(audioLoadClip(&clip[1], "Test2.wav") == AUDIO_SUCCESS);
 
-    log_info(
-        "Audio clip loaded: %ld frames, %dHz, %s audio",
-        clip.frames,
-        clip.sample_rate,
-        (clip.channels == 1) ? "Mono" : "Stereo");
+    int total_clips = 2, clips_left = 2;
 
-    audioPlayClip(&clip);
+    while (true) {
+        sleep(1);
 
-    audioUnloadClip(&clip);
+        for (int i = total_clips - clips_left; i < total_clips; ++i) {
+            if (audioPlayClip(&clip[i]) == AUDIO_FAILURE) {
+                audioUnloadClip(&clip[i]);
+
+                --clips_left;
+            }
+        }
+
+        if (clips_left == 0) {
+            break;
+        }
+    }
 
     audioQuitSubsystem();
 
