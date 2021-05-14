@@ -149,10 +149,7 @@ int audioLoadClip(AudioClip* clip, char const* clip_file_name)
 
     int bit_depth;
 
-    // Mask to extract bit-depth and signedness from clip_file_info.format
-    unsigned int pcm_format_mask = 0xF;
-
-    switch (clip_file_info.format & pcm_format_mask) {
+    switch (clip_file_info.format & SF_FORMAT_SUBMASK) {
     case SF_FORMAT_PCM_S8:
     case SF_FORMAT_PCM_U8:
         bit_depth = 8;
@@ -161,6 +158,7 @@ int audioLoadClip(AudioClip* clip, char const* clip_file_name)
 
         break;
 
+    default:
     case SF_FORMAT_PCM_16:
         bit_depth = 16;
 
@@ -172,10 +170,19 @@ int audioLoadClip(AudioClip* clip, char const* clip_file_name)
         bit_depth = 32;
 
         clip->format = (clip->channels == 1) ? AL_FORMAT_MONO_FLOAT32 : AL_FORMAT_STEREO_FLOAT32;
+
+        break;
+
+    case SF_FORMAT_DOUBLE:
+        bit_depth = 64;
+
+        clip->format = (clip->channels == 1) ? AL_FORMAT_MONO_DOUBLE_EXT : AL_FORMAT_STEREO_DOUBLE_EXT;
+
+        break;
     }
 
     // Allocate memory of size frames * channels * bytes per-sample
-    void* clip_file_data = calloc(clip->frames * clip->channels, bit_depth / 8);
+    void* clip_file_data = malloc(clip->frames * clip->channels * bit_depth / 8);
 
     if (clip_file_data == NULL) {
         log_error("Failed to allocate memory to temporary clip data buffer");
