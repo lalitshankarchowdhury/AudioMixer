@@ -9,6 +9,7 @@
 #include <AL/alc.h>
 #include <AL/alext.h>
 #include <sndfile.h>
+#include <assert.h>
 
 enum internal_audio_subsystem_failure_statuses {
     IAS_CLEANUP_NORMALLY,
@@ -29,7 +30,6 @@ enum internal_audio_track_failure_statuses {
 
 static ALCdevice* global_device;
 static ALCcontext* global_context;
-static ALuint global_source;
 
 static void internal_audio_subsystem_cleanup(int failure_status)
 {
@@ -58,7 +58,7 @@ static void internal_audio_clip_cleanup(int failure_status, AudioClip* clip)
         sf_close(clip->file);
 
     case IAC_OPEN_CLIP_FILE_FAILURE:
-        alDeleteSources(1, &global_source);
+        alDeleteSources(1, &clip->source);
 
     case IAC_GENERATE_GLOBAL_SOURCE_FAILURE:
         alDeleteBuffers(1, &clip->buffer);
@@ -120,7 +120,7 @@ int audioLoadClip(AudioClip* clip, char const* clip_file_name)
         return AUDIO_FAILURE;
     }
 
-    alGenSources(1, &global_source);
+    alGenSources(1, &clip->source);
 
     if (alGetError() != AL_NO_ERROR) {
         log_error("Failed to generate global source");
@@ -209,9 +209,6 @@ int audioLoadClip(AudioClip* clip, char const* clip_file_name)
         clip->frames * clip->channels * bit_depth / 8,
         clip->sample_rate);
 
-    log_info("%0.3f MiB memory allocated to clip data buffer",
-        (clip->frames * clip->channels * bit_depth / 8) / (1024.0 * 1024.0));
-
     free(clip_file_data);
 
     if (alGetError() != AL_NO_ERROR) {
@@ -222,31 +219,43 @@ int audioLoadClip(AudioClip* clip, char const* clip_file_name)
         return AUDIO_FAILURE;
     }
 
+    log_info(
+        "Audio clip loaded: %ld frames, %dHz, %s audio",
+        clip->frames,
+        clip->sample_rate,
+        (clip->channels == 1) ? "Mono" : "Stereo");
+
+    // Attach clip buffer to global source
+    alSourcei(clip->source, AL_BUFFER, clip->buffer);
+
+    assert(alGetError() == AL_NO_ERROR);
+
+    alSourcePlay(clip->source);
+
+    assert(alGetError() == AL_NO_ERROR);
+
     return AUDIO_SUCCESS;
 }
 
-void audioPlayClip(AudioClip* clip)
+int audioPlayClip(AudioClip* clip)
 {
-    // Attach clip buffer to global source
-    alSourcei(global_source, AL_BUFFER, clip->buffer);
-
-    alSourcePlay(global_source);
-
     ALenum source_state;
 
-    do {
-        sleep(1);
+    alGetSourcei(clip->source, AL_SOURCE_STATE, &source_state);
 
-        alGetSourcei(global_source, AL_SOURCE_STATE, &source_state);
-    } while (source_state == AL_PLAYING);
+    return (source_state == AL_PLAYING) ? AUDIO_SUCCESS : AUDIO_FAILURE;
 }
 
 void audioUnloadClip(AudioClip* clip)
 {
+    log_info("Unload audio clip");
+
     internal_audio_clip_cleanup(IAC_CLEANUP_NORMALLY, clip);
 }
 
 void audioQuitSubsystem()
 {
+    log_info("Quit audio subsystem");
+
     internal_audio_subsystem_cleanup(IAS_CLEANUP_NORMALLY);
 }
