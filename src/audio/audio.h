@@ -6,6 +6,7 @@
 typedef struct {
     SNDFILE* file;
     ALuint buffer;
+    ALuint source;
     long frames;
     int sample_rate;
     int channels;
@@ -20,5 +21,5 @@ enum audio_failure_statuses {
 int audioInitSubsystem();
 int audioLoadClip(AudioClip* clip, char const* clip_file_name);
 void audioUnloadClip(AudioClip* clip);
-void audioPlayClip(AudioClip* clip);
+int audioPlayClip(AudioClip* clip);
 void audioQuitSubsystem();
