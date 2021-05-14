@@ -7,6 +7,7 @@
 
 #include <AL/al.h>
 #include <AL/alc.h>
+#include <AL/alext.h>
 #include <sndfile.h>
 
 enum internal_audio_subsystem_failure_statuses {
@@ -166,10 +167,15 @@ int audioLoadClip(AudioClip* clip, char const* clip_file_name)
         clip->format = (clip->channels == 1) ? AL_FORMAT_MONO16 : AL_FORMAT_STEREO16;
 
         break;
+
+    case SF_FORMAT_FLOAT:
+        bit_depth = 32;
+
+        clip->format = (clip->channels == 1) ? AL_FORMAT_MONO_FLOAT32 : AL_FORMAT_STEREO_FLOAT32;
     }
 
     // Allocate memory of size frames * channels * bytes per-sample
-    void* clip_file_data = calloc(clip->frames * clip->channels, bit_depth / 2);
+    void* clip_file_data = calloc(clip->frames * clip->channels, bit_depth / 8);
 
     if (clip_file_data == NULL) {
         log_error("Failed to allocate memory to temporary clip data buffer");
@@ -181,7 +187,7 @@ int audioLoadClip(AudioClip* clip, char const* clip_file_name)
         return AUDIO_FAILURE;
     }
 
-    if (sf_readf_short(clip->file, (short*)clip_file_data, clip->frames) != clip->frames) {
+    if (sf_readf_float(clip->file, clip_file_data, clip->frames) != clip->frames) {
         log_error("Failed to read clip file completely");
 
         internal_audio_clip_cleanup(IAC_READ_CLIP_FILE_COMPLETELY_FAILURE, clip);
@@ -193,8 +199,11 @@ int audioLoadClip(AudioClip* clip, char const* clip_file_name)
         clip->buffer,
         clip->format,
         clip_file_data,
-        clip->frames * clip->channels * bit_depth / 2,
+        clip->frames * clip->channels * bit_depth / 8,
         clip->sample_rate);
+
+    log_info("%0.3f MiB memory allocated to clip data buffer",
+        (clip->frames * clip->channels * bit_depth / 8) / (1024.0 * 1024.0));
 
     free(clip_file_data);
 
