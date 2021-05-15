@@ -21,5 +21,5 @@ enum audio_failure_statuses {
 int audioInitSubsystem();
 int audioLoadClip(AudioClip* clip, char const* clip_file_name);
 void audioUnloadClip(AudioClip* clip);
-int audioPlayClip(AudioClip* clip);
+int audioPlayClips(AudioClip* clips, int num_clips);
 void audioQuitSubsystem();
