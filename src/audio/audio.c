@@ -9,7 +9,6 @@
 #include <memory.h>
 #include <sndfile.h>
 #include <stdbool.h>
-#include <unistd.h>
 
 enum internal_audio_subsystem_failure_statuses {
     IAS_CLEANUP_NORMALLY,
@@ -25,7 +24,8 @@ enum internal_audio_track_failure_statuses {
     IAC_GENERATE_CLIP_BUFFER_FAILURE,
     IAC_ALLOCATE_MEMORY_TO_TEMP_CLIP_DATA_BUFFER_FAILURE,
     IAC_READ_CLIP_FILE_COMPLETELY_FAILURE,
-    IAC_COPY_CLIP_FILE_DATA_TO_CLIP_BUFFER_FAILURE
+    IAC_COPY_CLIP_FILE_DATA_TO_CLIP_BUFFER_FAILURE,
+    IAC_ATTACH_CLIP_BUFFER_TO_ITS_SOURCE_FAILURE,
 };
 
 static ALCdevice* global_device;
@@ -54,6 +54,7 @@ internal_audio_clip_cleanup(int failure_status, AudioClip* clip)
 {
     switch (failure_status) {
     case IAC_CLEANUP_NORMALLY:
+    case IAC_ATTACH_CLIP_BUFFER_TO_ITS_SOURCE_FAILURE:
     case IAC_COPY_CLIP_FILE_DATA_TO_CLIP_BUFFER_FAILURE:
     case IAC_READ_CLIP_FILE_COMPLETELY_FAILURE:
     case IAC_ALLOCATE_MEMORY_TO_TEMP_CLIP_DATA_BUFFER_FAILURE:
@@ -227,50 +228,46 @@ int audioLoadClip(AudioClip* clip, char const* clip_file_name)
         clip->sample_rate,
         (clip->channels == 1) ? "Mono" : "Stereo");
 
-    // Attach clip buffer to global source
     alSourcei(clip->source, AL_BUFFER, clip->buffer);
 
-    assert(alGetError() == AL_NO_ERROR);
+    if (alGetError() != AL_NO_ERROR) {
+        log_error("Failed to attach clip buffer to its source");
+
+        internal_audio_clip_cleanup(IAC_ATTACH_CLIP_BUFFER_TO_ITS_SOURCE_FAILURE,
+            clip);
+
+        return AUDIO_FAILURE;
+    }
 
     return AUDIO_SUCCESS;
 }
 
 int audioPlayClips(AudioClip clips[], int num_clips)
 {
-    static bool playing = false;
+    for (int i = 0; i < num_clips; ++i) {
+        alSourcePlayv(1, &clips[i].source);
 
-    if (!playing) {
-        for (int i = 0; i < num_clips; ++i) {
-            alSourcePlayv(1, &clips[i].source);
+        if (alGetError() != AL_NO_ERROR) {
+            log_error("Failed to play audio clip");
 
-            assert(alGetError() == AL_NO_ERROR);
-        }
-
-        playing = true;
-
-        ALenum source_state;
-
-        // Query the playing state of every clip source and exit if every clip has played
-        while (true) {
-            sleep(1);
-
-            for (int i = 0, clips_played = 0; i < num_clips; ++i) {
-                alGetSourcei(clips[i].source, AL_SOURCE_STATE, &source_state);
-
-                if (source_state != AL_PLAYING) {
-                    ++clips_played;
-                }
-
-                if (clips_played == num_clips) {
-                    playing = false;
-
-                    return AUDIO_SUCCESS;
-                }
-            }
+            return AUDIO_FAILURE;
         }
     }
 
     return AUDIO_SUCCESS;
+}
+
+bool audioIsClipPlaying(AudioClip* clip)
+{
+    ALenum source_state;
+
+    alGetSourcei(clip->source, AL_SOURCE_STATE, &source_state);
+
+    if (source_state != AL_PLAYING) {
+        return false;
+    }
+
+    return true;
 }
 
 void audioUnloadClip(AudioClip* clip)
