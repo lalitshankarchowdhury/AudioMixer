@@ -50,7 +50,7 @@ internal_audio_subsystem_cleanup(int failure_status)
 }
 
 static void
-internal_audio_clip_cleanup(int failure_status, AudioClip* clip)
+internal_audio_clip_cleanup(int failure_status, Clip* clip)
 {
     switch (failure_status) {
     case IAC_CLEANUP_NORMALLY:
@@ -106,7 +106,7 @@ int audioInitSubsystem()
     return AUDIO_SUCCESS;
 }
 
-int audioLoadClip(AudioClip* clip, char const* clip_file_name)
+int audioLoadClip(Clip* clip, char const* clip_file_name)
 {
     log_info("Load audio clip: %s", clip_file_name);
 
@@ -242,7 +242,7 @@ int audioLoadClip(AudioClip* clip, char const* clip_file_name)
     return AUDIO_SUCCESS;
 }
 
-int audioPlayClips(AudioClip clips[], int num_clips)
+int audioPlayClips(Clip clips[], int num_clips)
 {
     for (int i = 0; i < num_clips; ++i) {
         alSourcePlayv(1, &clips[i].source);
@@ -257,7 +257,7 @@ int audioPlayClips(AudioClip clips[], int num_clips)
     return AUDIO_SUCCESS;
 }
 
-bool audioIsClipPlaying(AudioClip* clip)
+bool audioIsClipPlaying(Clip* clip)
 {
     ALenum source_state;
 
@@ -270,7 +270,7 @@ bool audioIsClipPlaying(AudioClip* clip)
     return true;
 }
 
-void audioUnloadClip(AudioClip* clip)
+void audioUnloadClip(Clip* clip)
 {
     log_info("Unload audio clip");
 
