@@ -1,15 +1,14 @@
 #include "../audio/audio.h"
 #include "../log/log.h"
 
-#include <malloc.h>
-#include <memory.h>
-#include <unistd.h>
-
 #include <AL/al.h>
 #include <AL/alc.h>
 #include <AL/alext.h>
-#include <sndfile.h>
 #include <assert.h>
+#include <malloc.h>
+#include <memory.h>
+#include <sndfile.h>
+#include <unistd.h>
 
 enum internal_audio_subsystem_failure_statuses {
     IAS_CLEANUP_NORMALLY,
@@ -31,7 +30,8 @@ enum internal_audio_track_failure_statuses {
 static ALCdevice* global_device;
 static ALCcontext* global_context;
 
-static void internal_audio_subsystem_cleanup(int failure_status)
+static void
+internal_audio_subsystem_cleanup(int failure_status)
 {
     switch (failure_status) {
     case IAS_CLEANUP_NORMALLY:
@@ -48,7 +48,8 @@ static void internal_audio_subsystem_cleanup(int failure_status)
     }
 }
 
-static void internal_audio_clip_cleanup(int failure_status, AudioClip* clip)
+static void
+internal_audio_clip_cleanup(int failure_status, AudioClip* clip)
 {
     switch (failure_status) {
     case IAC_CLEANUP_NORMALLY:
@@ -169,14 +170,16 @@ int audioLoadClip(AudioClip* clip, char const* clip_file_name)
     case SF_FORMAT_FLOAT:
         bit_depth = 32;
 
-        clip->format = (clip->channels == 1) ? AL_FORMAT_MONO_FLOAT32 : AL_FORMAT_STEREO_FLOAT32;
+        clip->format = (clip->channels == 1) ? AL_FORMAT_MONO_FLOAT32
+                                             : AL_FORMAT_STEREO_FLOAT32;
 
         break;
 
     case SF_FORMAT_DOUBLE:
         bit_depth = 64;
 
-        clip->format = (clip->channels == 1) ? AL_FORMAT_MONO_DOUBLE_EXT : AL_FORMAT_STEREO_DOUBLE_EXT;
+        clip->format = (clip->channels == 1) ? AL_FORMAT_MONO_DOUBLE_EXT
+                                             : AL_FORMAT_STEREO_DOUBLE_EXT;
 
         break;
     }
@@ -188,8 +191,7 @@ int audioLoadClip(AudioClip* clip, char const* clip_file_name)
         log_error("Failed to allocate memory to temporary clip data buffer");
 
         internal_audio_clip_cleanup(
-            IAC_ALLOCATE_MEMORY_TO_TEMP_CLIP_DATA_BUFFER_FAILURE,
-            clip);
+            IAC_ALLOCATE_MEMORY_TO_TEMP_CLIP_DATA_BUFFER_FAILURE, clip);
 
         return AUDIO_FAILURE;
     }
@@ -202,8 +204,7 @@ int audioLoadClip(AudioClip* clip, char const* clip_file_name)
         return AUDIO_FAILURE;
     }
 
-    alBufferData(
-        clip->buffer,
+    alBufferData(clip->buffer,
         clip->format,
         clip_file_data,
         clip->frames * clip->channels * bit_depth / 8,
@@ -214,13 +215,13 @@ int audioLoadClip(AudioClip* clip, char const* clip_file_name)
     if (alGetError() != AL_NO_ERROR) {
         log_error("Failed to copy clip file data to clip buffer");
 
-        internal_audio_clip_cleanup(IAC_COPY_CLIP_FILE_DATA_TO_CLIP_BUFFER_FAILURE, clip);
+        internal_audio_clip_cleanup(IAC_COPY_CLIP_FILE_DATA_TO_CLIP_BUFFER_FAILURE,
+            clip);
 
         return AUDIO_FAILURE;
     }
 
-    log_info(
-        "Audio clip loaded: %ld frames, %dHz, %s audio",
+    log_info("Audio clip loaded: %ld frames, %dHz, %s audio",
         clip->frames,
         clip->sample_rate,
         (clip->channels == 1) ? "Mono" : "Stereo");
@@ -253,7 +254,8 @@ int audioPlayClips(AudioClip* clips, int num_clips)
 
     ALenum source_state;
 
-    // Query the playing state of every clip source and exit if every clip has played
+    // Query the playing state of every clip source and exit if every clip has
+    // played
     while (true) {
         sleep(1);
 
