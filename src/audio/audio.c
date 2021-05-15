@@ -8,6 +8,7 @@
 #include <malloc.h>
 #include <memory.h>
 #include <sndfile.h>
+#include <stdbool.h>
 #include <unistd.h>
 
 enum internal_audio_subsystem_failure_statuses {
@@ -234,40 +235,37 @@ int audioLoadClip(AudioClip* clip, char const* clip_file_name)
     return AUDIO_SUCCESS;
 }
 
-int audioPlayClips(AudioClip* clips, int num_clips)
+int audioPlayClips(AudioClip clips[], int num_clips)
 {
-    static bool played_before = false;
+    static bool playing = false;
 
-    ALuint sources[num_clips];
+    if (!playing) {
+        for (int i = 0; i < num_clips; ++i) {
+            alSourcePlayv(1, &clips[i].source);
 
-    for (int i = 0; i < num_clips; ++i) {
-        sources[i] = clips->source;
+            assert(alGetError() == AL_NO_ERROR);
+        }
 
-        clips++;
-    }
+        playing = true;
 
-    if (!played_before) {
-        alSourcePlayv(num_clips, sources);
+        ALenum source_state;
 
-        assert(alGetError() == AL_NO_ERROR);
-    }
+        // Query the playing state of every clip source and exit if every clip has played
+        while (true) {
+            sleep(1);
 
-    ALenum source_state;
+            for (int i = 0, clips_played = 0; i < num_clips; ++i) {
+                alGetSourcei(clips[i].source, AL_SOURCE_STATE, &source_state);
 
-    // Query the playing state of every clip source and exit if every clip has
-    // played
-    while (true) {
-        sleep(1);
+                if (source_state != AL_PLAYING) {
+                    ++clips_played;
+                }
 
-        for (int i = 0, clips_played = 0; i < num_clips; ++i) {
-            alGetSourcei(sources[i], AL_SOURCE_STATE, &source_state);
+                if (clips_played == num_clips) {
+                    playing = false;
 
-            if (source_state != AL_PLAYING) {
-                ++clips_played;
-            }
-
-            if (clips_played == num_clips) {
-                return AUDIO_SUCCESS;
+                    return AUDIO_SUCCESS;
+                }
             }
         }
     }
