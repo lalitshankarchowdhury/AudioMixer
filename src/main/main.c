@@ -16,7 +16,10 @@ int main()
     assert(audioLoadClip(&clips[0], "Test1.wav") == AUDIO_SUCCESS);
     assert(audioLoadClip(&clips[1], "Test2.wav") == AUDIO_SUCCESS);
 
-    audioPlayClips(clips, 2);
+    // Continuously play audio clips
+    while (true) {
+        audioPlayClips(clips, 2);
+    }
 
     audioUnloadClip(&clips[0]);
     audioUnloadClip(&clips[1]);
