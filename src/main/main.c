@@ -12,7 +12,7 @@ int main()
 {
     assert(audioInitSubsystem() == AUDIO_SUCCESS);
 
-    AudioClip clips[2];
+    Clip clips[2];
 
     assert(audioLoadClip(&clips[0], "Test1.wav") == AUDIO_SUCCESS);
     assert(audioLoadClip(&clips[1], "Test2.wav") == AUDIO_SUCCESS);
