@@ -182,7 +182,7 @@ int audioLoadClip(AudioClip* clip, char const* clip_file_name)
     }
 
     // Allocate memory of size frames * channels * bytes per-sample
-    void* clip_file_data = malloc(clip->frames * clip->channels * bit_depth / 8);
+    void* clip_file_data = calloc(clip->frames * clip->channels, bit_depth / 8);
 
     if (clip_file_data == NULL) {
         log_error("Failed to allocate memory to temporary clip data buffer");
@@ -194,7 +194,7 @@ int audioLoadClip(AudioClip* clip, char const* clip_file_name)
         return AUDIO_FAILURE;
     }
 
-    if (sf_readf_float(clip->file, clip_file_data, clip->frames) != clip->frames) {
+    if (sf_readf_double(clip->file, clip_file_data, clip->frames) != clip->frames) {
         log_error("Failed to read clip file completely");
 
         internal_audio_clip_cleanup(IAC_READ_CLIP_FILE_COMPLETELY_FAILURE, clip);
@@ -230,20 +230,47 @@ int audioLoadClip(AudioClip* clip, char const* clip_file_name)
 
     assert(alGetError() == AL_NO_ERROR);
 
-    alSourcePlay(clip->source);
-
-    assert(alGetError() == AL_NO_ERROR);
-
     return AUDIO_SUCCESS;
 }
 
-int audioPlayClip(AudioClip* clip)
+int audioPlayClips(AudioClip* clips, int num_clips)
 {
+    static bool played_before = false;
+
+    ALuint sources[num_clips];
+
+    for (int i = 0; i < num_clips; ++i) {
+        sources[i] = clips->source;
+
+        clips++;
+    }
+
+    if (!played_before) {
+        alSourcePlayv(num_clips, sources);
+
+        assert(alGetError() == AL_NO_ERROR);
+    }
+
     ALenum source_state;
 
-    alGetSourcei(clip->source, AL_SOURCE_STATE, &source_state);
+    // Query the playing state of every clip source and exit if every clip has played
+    while (true) {
+        sleep(1);
 
-    return (source_state == AL_PLAYING) ? AUDIO_SUCCESS : AUDIO_FAILURE;
+        for (int i = 0, clips_played = 0; i < num_clips; ++i) {
+            alGetSourcei(sources[i], AL_SOURCE_STATE, &source_state);
+
+            if (source_state != AL_PLAYING) {
+                ++clips_played;
+            }
+
+            if (clips_played == num_clips) {
+                return AUDIO_SUCCESS;
+            }
+        }
+    }
+
+    return AUDIO_SUCCESS;
 }
 
 void audioUnloadClip(AudioClip* clip)
