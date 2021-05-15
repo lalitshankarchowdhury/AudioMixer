@@ -13,10 +13,8 @@ typedef struct {
     ALenum format;
 } AudioClip;
 
-enum audio_failure_statuses {
-    AUDIO_SUCCESS,
-    AUDIO_FAILURE
-};
+enum audio_failure_statuses { AUDIO_SUCCESS,
+    AUDIO_FAILURE };
 
 int audioInitSubsystem();
 int audioLoadClip(AudioClip* clip, char const* clip_file_name);
