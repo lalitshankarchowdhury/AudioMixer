@@ -9,6 +9,8 @@
 #include <memory.h>
 #include <sndfile.h>
 #include <stdbool.h>
+#include <time.h>
+#include <unistd.h>
 
 enum internal_audio_subsystem_failure_statuses {
     IAS_CLEANUP_NORMALLY,
@@ -245,7 +247,7 @@ int audioLoadClip(Clip* clip, char const* clip_file_name)
 int audioPlayClips(Clip clips[], int num_clips)
 {
     for (int i = 0; i < num_clips; ++i) {
-        alSourcePlayv(1, &clips[i].source);
+        alSourcePlay(clips[i].source);
 
         if (alGetError() != AL_NO_ERROR) {
             log_error("Failed to play audio clip");
@@ -275,6 +277,49 @@ void audioUnloadClip(Clip* clip)
     log_info("Unload audio clip");
 
     internal_audio_clip_cleanup(IAC_CLEANUP_NORMALLY, clip);
+}
+
+void audioAddClipToTrack(Track* track, Clip* clip, int clip_position)
+{
+    track->num_clips += 1;
+
+    // Reallocate memory to store one more pointer to Clip
+    track->clips = (Clip**)realloc(track->clips, track->num_clips * sizeof(Clip*));
+
+    track->clips[track->num_clips - 1] = clip;
+
+    // Reallocate memory to store one more clip position
+    track->clip_positions = (time_t*)realloc(track->clip_positions, track->num_clips * sizeof(time_t));
+
+    track->clip_positions[track->num_clips - 1] = clip_position;
+
+    log_info("Clip position: %d", track->clip_positions[track->num_clips - 1]);
+}
+
+void audioPlayTrack(Track* track)
+{
+    time_t current_time;
+
+    while (true) {
+        for (int i = 0; i < track->num_clips; ++i) {
+            time(&current_time);
+
+            // Start playing track if its time comes
+            if (track->clip_positions[i] == current_time && track->clips[i] != NULL && !track->clips[i]->playing) {
+                log_info("Playing audio clip %d", i);
+
+                assert(audioPlayClips(track->clips[i], 1) == AUDIO_SUCCESS);
+
+                track->clips[i]->playing = true;
+
+                if (!audioIsClipPlaying(track->clips[i])) {
+                    audioUnloadClip(track->clips[i]);
+
+                    track->clips[i] = NULL;
+                }
+            }
+        }
+    }
 }
 
 void audioQuitSubsystem()
