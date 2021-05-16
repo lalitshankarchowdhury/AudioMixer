@@ -3,6 +3,7 @@
 #include "../log/log.h"
 
 #include <assert.h>
+#include <memory.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,21 +18,19 @@ int main()
     assert(audioLoadClip(&clips[0], "Test1.wav") == AUDIO_SUCCESS);
     assert(audioLoadClip(&clips[1], "Test2.wav") == AUDIO_SUCCESS);
 
-    assert(audioPlayClips(clips, 2) == AUDIO_SUCCESS);
+    Track track;
 
-    int clips_left_to_play = 2;
+    memset(&track, 0, sizeof(Track));
 
-    while (clips_left_to_play > 0) {
-        sleep(1);
+    time_t clip_position1, clip_position2;
 
-        for (int i = 0; i < 2; ++i) {
-            if (!audioIsClipPlaying(&clips[i])) {
-                audioUnloadClip(&clips[i]);
+    time(&clip_position1);
+    time(&clip_position2);
 
-                --clips_left_to_play;
-            }
-        }
-    }
+    audioAddClipToTrack(&track, &clips[0], clip_position1);
+    audioAddClipToTrack(&track, &clips[1], clip_position2 + 10);
+
+    audioPlayTrack(&track);
 
     audioQuitSubsystem();
 
