@@ -1,5 +1,5 @@
-# audio-editor
-An audio editor I am developing.
+# audio-mixer
+An audio mixer I am developing.
 
 Currently it can only play tracks (a track is a group of clips).
 
