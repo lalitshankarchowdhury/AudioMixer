@@ -1,2 +1,3 @@
-# audio-mixer
-An audio mixer.
+# AudioMixer
+
+Audio mixer to mix audio tracks and play them.
